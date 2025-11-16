@@ -1,12 +1,42 @@
-'use client'
-
-import { useSearchParams } from 'next/navigation'
-import { Suspense } from 'react'
 import Link from 'next/link'
 
-function ExploreContent() {
-  const searchParams = useSearchParams()
-  const url = searchParams.get('url')
+interface ExtractedData {
+  brand: string | null
+  model: string | null
+  reference: string | null
+  url: string
+}
+
+interface PageProps {
+  searchParams: { url?: string }
+}
+
+async function fetchWatchData(url: string): Promise<ExtractedData | null> {
+  try {
+    const apiUrl = `http://localhost:3000/api/extract?url=${encodeURIComponent(url)}`
+    const response = await fetch(apiUrl, { cache: 'no-store' })
+
+    if (!response.ok) {
+      console.error('Failed to fetch watch data:', response.statusText)
+      return null
+    }
+
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.error('Error fetching watch data:', error)
+    return null
+  }
+}
+
+export default async function ExplorePage({ searchParams }: PageProps) {
+  const url = searchParams.url
+  let watchData: ExtractedData | null = null
+
+  // Fetch data on the server if URL is provided
+  if (url) {
+    watchData = await fetchWatchData(url)
+  }
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
@@ -44,10 +74,52 @@ function ExploreContent() {
             <div className="text-2xl">⌚</div>
             <h2 className="text-2xl font-semibold text-white">Model Information</h2>
           </div>
-          <p className="text-slate-400 italic">Coming soon...</p>
-          <p className="text-slate-500 text-sm mt-2">
-            Detailed specifications, model number, reference, year, condition, and authenticity information.
-          </p>
+
+          {watchData ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">
+                    Brand
+                  </label>
+                  <p className="text-lg text-slate-100">
+                    {watchData.brand || '—'}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">
+                    Reference Number
+                  </label>
+                  <p className="text-lg text-slate-100">
+                    {watchData.reference || '—'}
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">
+                  Model
+                </label>
+                <p className="text-lg text-slate-100">
+                  {watchData.model || '—'}
+                </p>
+              </div>
+
+              <p className="text-slate-500 text-sm mt-4 pt-4 border-t border-slate-700">
+                Additional specifications, year, condition, and authenticity information will be added in future updates.
+              </p>
+            </div>
+          ) : (
+            <>
+              <p className="text-slate-400 italic">
+                {url ? 'Loading watch information...' : 'Enter a Chrono24 URL to see watch details'}
+              </p>
+              <p className="text-slate-500 text-sm mt-2">
+                Detailed specifications, model number, reference, year, condition, and authenticity information.
+              </p>
+            </>
+          )}
         </div>
 
         {/* Other Listings Card */}
@@ -139,19 +211,5 @@ function ExploreContent() {
       {/* Bottom spacing */}
       <div className="mt-12"></div>
     </div>
-  )
-}
-
-export default function ExplorePage() {
-  return (
-    <Suspense fallback={
-      <div className="container mx-auto px-4 py-16">
-        <div className="text-center text-white">
-          <div className="animate-pulse">Loading dashboard...</div>
-        </div>
-      </div>
-    }>
-      <ExploreContent />
-    </Suspense>
   )
 }
