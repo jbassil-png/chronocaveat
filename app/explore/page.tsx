@@ -1,3 +1,7 @@
+'use client'
+
+import { useSearchParams } from 'next/navigation'
+import { useEffect, useState, Suspense } from 'react'
 import Link from 'next/link'
 
 interface ExtractedData {
@@ -7,36 +11,83 @@ interface ExtractedData {
   url: string
 }
 
-interface PageProps {
-  searchParams: { url?: string }
+interface Listing {
+  title: string
+  price: string
+  url: string
+  image: string | null
+  sellerLocation: string | null
 }
 
-async function fetchWatchData(url: string): Promise<ExtractedData | null> {
-  try {
-    const apiUrl = `http://localhost:3000/api/extract?url=${encodeURIComponent(url)}`
-    const response = await fetch(apiUrl, { cache: 'no-store' })
+function ExploreContent() {
+  const searchParams = useSearchParams()
+  const url = searchParams.get('url')
+  const [watchData, setWatchData] = useState<ExtractedData | null>(null)
+  const [listings, setListings] = useState<Listing[]>([])
+  const [loading, setLoading] = useState(false)
+  const [listingsLoading, setListingsLoading] = useState(false)
 
-    if (!response.ok) {
-      console.error('Failed to fetch watch data:', response.statusText)
-      return null
+  useEffect(() => {
+    if (!url) return
+
+    const fetchWatchData = async () => {
+      setLoading(true)
+      try {
+        const apiUrl = `/api/extract?url=${encodeURIComponent(url)}`
+        const response = await fetch(apiUrl, { cache: 'no-store' })
+
+        if (!response.ok) {
+          console.error('Failed to fetch watch data:', response.statusText)
+          setWatchData(null)
+          return
+        }
+
+        const data = await response.json()
+        setWatchData(data)
+      } catch (error) {
+        console.error('Error fetching watch data:', error)
+        setWatchData(null)
+      } finally {
+        setLoading(false)
+      }
     }
 
-    const data = await response.json()
-    return data
-  } catch (error) {
-    console.error('Error fetching watch data:', error)
-    return null
-  }
-}
+    fetchWatchData()
+  }, [url])
 
-export default async function ExplorePage({ searchParams }: PageProps) {
-  const url = searchParams.url
-  let watchData: ExtractedData | null = null
+  // Fetch Chrono24 listings when we have a reference number
+  useEffect(() => {
+    if (!watchData?.reference) {
+      setListings([])
+      return
+    }
 
-  // Fetch data on the server if URL is provided
-  if (url) {
-    watchData = await fetchWatchData(url)
-  }
+    const fetchListings = async () => {
+      setListingsLoading(true)
+      try {
+        const response = await fetch(
+          `/api/chrono24?reference=${encodeURIComponent(watchData.reference as string)}`,
+          { cache: 'no-store' }
+        )
+
+        if (!response.ok) {
+          console.error('Failed to fetch listings:', response.statusText)
+          setListings([])
+          return
+        }
+
+        const data = await response.json()
+        setListings(data)
+      } catch (error) {
+        console.error('Error fetching listings:', error)
+        setListings([])
+      } finally {
+        setListingsLoading(false)
+      }
+    }
+
+    fetchListings()
+  }, [watchData])
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
@@ -75,7 +126,11 @@ export default async function ExplorePage({ searchParams }: PageProps) {
             <h2 className="text-2xl font-semibold text-white">Model Information</h2>
           </div>
 
-          {watchData ? (
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-pulse text-slate-400">Loading watch information...</div>
+            </div>
+          ) : watchData ? (
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -113,7 +168,7 @@ export default async function ExplorePage({ searchParams }: PageProps) {
           ) : (
             <>
               <p className="text-slate-400 italic">
-                {url ? 'Loading watch information...' : 'Enter a Chrono24 URL to see watch details'}
+                {url ? 'No data available' : 'Enter a Chrono24 URL to see watch details'}
               </p>
               <p className="text-slate-500 text-sm mt-2">
                 Detailed specifications, model number, reference, year, condition, and authenticity information.
@@ -128,21 +183,65 @@ export default async function ExplorePage({ searchParams }: PageProps) {
             <div className="text-2xl">🔍</div>
             <h2 className="text-2xl font-semibold text-white">Other Listings (Chrono24 + eBay)</h2>
           </div>
-          <p className="text-slate-400 italic mb-4">Coming soon...</p>
-          <p className="text-slate-500 text-sm mb-4">
-            Compare similar watches from multiple marketplaces to find the best deals.
-          </p>
-          {/* Grid placeholder for future listings */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
-            <div className="border-2 border-dashed border-slate-600 rounded-lg p-8 text-center">
-              <p className="text-slate-500 text-sm">Listing placeholder</p>
-            </div>
-            <div className="border-2 border-dashed border-slate-600 rounded-lg p-8 text-center">
-              <p className="text-slate-500 text-sm">Listing placeholder</p>
-            </div>
-            <div className="border-2 border-dashed border-slate-600 rounded-lg p-8 text-center">
-              <p className="text-slate-500 text-sm">Listing placeholder</p>
-            </div>
+
+          {/* Chrono24 Listings */}
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-white mb-3">Chrono24 Listings</h3>
+
+            {listingsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-pulse text-slate-400">Loading listings...</div>
+              </div>
+            ) : !watchData?.reference ? (
+              <p className="text-slate-400 italic">
+                No reference number detected — cannot search for listings.
+              </p>
+            ) : listings.length === 0 ? (
+              <p className="text-slate-400 italic">No listings found.</p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {listings.map((listing, index) => (
+                  <div
+                    key={index}
+                    className="bg-white p-4 shadow rounded-lg hover:shadow-md transition"
+                  >
+                    {listing.image && (
+                      <img
+                        src={listing.image}
+                        alt={listing.title}
+                        className="w-full h-48 object-cover rounded-md mb-3"
+                      />
+                    )}
+                    <h4 className="text-sm font-semibold text-gray-900 mb-2 line-clamp-2">
+                      {listing.title}
+                    </h4>
+                    <p className="text-lg font-bold text-gray-900 mb-2">{listing.price}</p>
+                    {listing.sellerLocation && (
+                      <p className="text-xs text-gray-600 mb-3">
+                        📍 {listing.sellerLocation}
+                      </p>
+                    )}
+                    <a
+                      href={listing.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block w-full bg-blue-600 hover:bg-blue-700 text-white text-center font-medium py-2 px-4 rounded transition-colors duration-200"
+                    >
+                      View on Chrono24
+                    </a>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* eBay Listings Placeholder */}
+          <div className="pt-6 border-t border-slate-700">
+            <h3 className="text-lg font-semibold text-white mb-3">eBay Listings</h3>
+            <p className="text-slate-400 italic">Coming soon...</p>
+            <p className="text-slate-500 text-sm mt-2">
+              eBay integration will be added in future updates.
+            </p>
           </div>
         </div>
 
@@ -211,5 +310,19 @@ export default async function ExplorePage({ searchParams }: PageProps) {
       {/* Bottom spacing */}
       <div className="mt-12"></div>
     </div>
+  )
+}
+
+export default function ExplorePage() {
+  return (
+    <Suspense fallback={
+      <div className="container mx-auto px-4 py-16">
+        <div className="text-center text-white">
+          <div className="animate-pulse">Loading dashboard...</div>
+        </div>
+      </div>
+    }>
+      <ExploreContent />
+    </Suspense>
   )
 }
