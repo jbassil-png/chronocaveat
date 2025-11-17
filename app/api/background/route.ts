@@ -67,6 +67,7 @@ export async function GET(request: NextRequest) {
 
         const data = await response.json()
         const html = data.browserHtml ?? ''
+        console.log(`DEBUG ${source.name} HTML:`, html.slice(0, 500))
         const $ = cheerio.load(html)
 
         let resultsFound = 0
