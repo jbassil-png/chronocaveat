@@ -38,11 +38,12 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    const auth = Buffer.from(`${apiKey}:`).toString('base64')
     const response = await fetch('https://api.zyte.com/v1/extract', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
+        'Authorization': `Basic ${auth}`,
       },
       body: JSON.stringify({
         url: url,
