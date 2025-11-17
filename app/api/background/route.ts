@@ -8,11 +8,11 @@ export interface BackgroundArticle {
   source: string
 }
 
-const publishers = [
-  { name: 'Hodinkee', domain: 'hodinkee.com' },
-  { name: 'Fratello', domain: 'fratellowatches.com' },
-  { name: 'Monochrome', domain: 'monochrome-watches.com' },
-  { name: 'SJX', domain: 'watchesbysjx.com' },
+const SOURCES = [
+  { name: 'Hodinkee', url: (q: string) => `https://www.hodinkee.com/search?q=${encodeURIComponent(q)}` },
+  { name: 'Fratello', url: (q: string) => `https://www.fratellowatches.com/?s=${encodeURIComponent(q)}` },
+  { name: 'Monochrome', url: (q: string) => `https://monochrome-watches.com/?s=${encodeURIComponent(q)}` },
+  { name: 'SJX', url: (q: string) => `https://watchesbysjx.com/?s=${encodeURIComponent(q)}` },
 ]
 
 export async function GET(request: NextRequest) {
@@ -29,6 +29,8 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Build cleaned query string
+    const query = `${brand} ${model}`.trim()
     const articles: BackgroundArticle[] = []
 
     // Check for Zyte API key
@@ -39,11 +41,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Search each publisher
-    for (const publisher of publishers) {
+    for (const source of SOURCES) {
       try {
-        // Construct Google site search query
-        const googleQuery = `site:${publisher.domain} ${brand} ${model} review`
-        const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(googleQuery)}`
+        // Get search URL for this publisher
+        const searchUrl = source.url(query)
 
         // Fetch via Zyte API
         const auth = Buffer.from(`${apiKey}:`).toString('base64')
@@ -54,80 +55,114 @@ export async function GET(request: NextRequest) {
             'Authorization': `Basic ${auth}`,
           },
           body: JSON.stringify({
-            url: googleSearchUrl,
+            url: searchUrl,
             browserHtml: true,
           }),
         })
 
         if (!response.ok) {
-          console.error(`Failed to fetch Google search for ${publisher.name}: ${response.status}`)
+          console.error(`Failed to fetch ${source.name} search: ${response.status}`)
           continue
         }
 
         const data = await response.json()
         const html = data.browserHtml ?? ''
-
         const $ = cheerio.load(html)
 
-        // Parse Google search results
-        // Google uses div.g for organic search results
         let resultsFound = 0
-        $('div.g').each((_, element) => {
-          if (resultsFound >= 2) return false // Limit to top 2 results per publisher
 
-          const $result = $(element)
+        // Extract articles based on publisher
+        switch (source.name) {
+          case 'Hodinkee':
+            $('article').each((_, element) => {
+              if (resultsFound >= 2) return false
 
-          // Extract title from h3
-          const title = $result.find('h3').first().text().trim()
-          if (!title) return // Skip if no title
+              const $article = $(element)
+              const $link = $article.find('a[href]').first()
+              const url = $link.attr('href')
+              const title = $article.find('h2').first().text().trim()
+              const snippet = $article.find('p').first().text().trim()
 
-          // Extract URL from the main link
-          const $link = $result.find('a[href]').first()
-          const href = $link.attr('href') || ''
+              if (title && url) {
+                articles.push({
+                  title,
+                  url: url.startsWith('http') ? url : `https://www.hodinkee.com${url}`,
+                  snippet: snippet || null,
+                  source: source.name,
+                })
+                resultsFound++
+              }
+            })
+            break
 
-          // Google wraps URLs, extract actual URL
-          let url = ''
-          if (href.startsWith('/url?q=')) {
-            // Parse the actual URL from Google's redirect
-            const urlMatch = href.match(/\/url\?q=([^&]+)/)
-            if (urlMatch) {
-              url = decodeURIComponent(urlMatch[1])
-            }
-          } else if (href.startsWith('http')) {
-            url = href
-          }
+          case 'Fratello':
+            $('.post-item, .post').each((_, element) => {
+              if (resultsFound >= 2) return false
 
-          // Verify URL is from the correct domain
-          if (!url || !url.includes(publisher.domain)) return
+              const $post = $(element)
+              const $link = $post.find('a[href]').first()
+              const url = $link.attr('href')
+              const title = $post.find('h2, h3, .entry-title').first().text().trim()
+              const snippet = $post.find('.excerpt, .entry-excerpt, p').first().text().trim()
 
-          // Extract snippet (description text)
-          // Google uses various classes for snippets: .VwiC3b, .lEBKkf, etc.
-          let snippet = $result
-            .find('.VwiC3b, .lEBKkf, [data-sncf="1"], [data-sncf="2"]')
-            .first()
-            .text()
-            .trim()
+              if (title && url) {
+                articles.push({
+                  title,
+                  url: url.startsWith('http') ? url : `https://www.fratellowatches.com${url}`,
+                  snippet: snippet || null,
+                  source: source.name,
+                })
+                resultsFound++
+              }
+            })
+            break
 
-          // Fallback: try to find any div with description-like text
-          if (!snippet) {
-            snippet = $result
-              .find('div[style*="-webkit-line-clamp"]')
-              .first()
-              .text()
-              .trim()
-          }
+          case 'Monochrome':
+            $('article.post').each((_, element) => {
+              if (resultsFound >= 2) return false
 
-          articles.push({
-            title,
-            url,
-            snippet: snippet || null,
-            source: publisher.name,
-          })
+              const $article = $(element)
+              const title = $article.find('h2.entry-title').first().text().trim()
+              const $link = $article.find('h2.entry-title a').first()
+              const url = $link.attr('href')
+              const snippet = $article.find('div.entry-excerpt, .entry-summary, p').first().text().trim()
 
-          resultsFound++
-        })
+              if (title && url) {
+                articles.push({
+                  title,
+                  url: url.startsWith('http') ? url : `https://monochrome-watches.com${url}`,
+                  snippet: snippet || null,
+                  source: source.name,
+                })
+                resultsFound++
+              }
+            })
+            break
+
+          case 'SJX':
+            $('article.post').each((_, element) => {
+              if (resultsFound >= 2) return false
+
+              const $article = $(element)
+              const title = $article.find('h2.entry-title').first().text().trim()
+              const $link = $article.find('h2.entry-title a').first()
+              const url = $link.attr('href')
+              const snippet = $article.find('div.entry-summary, .entry-excerpt, p').first().text().trim()
+
+              if (title && url) {
+                articles.push({
+                  title,
+                  url: url.startsWith('http') ? url : `https://watchesbysjx.com${url}`,
+                  snippet: snippet || null,
+                  source: source.name,
+                })
+                resultsFound++
+              }
+            })
+            break
+        }
       } catch (error) {
-        console.error(`Error searching ${publisher.name}:`, error)
+        console.error(`Error searching ${source.name}:`, error)
         // Continue with next publisher
       }
     }
