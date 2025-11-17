@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import * as cheerio from 'cheerio'
 
+export const runtime = 'nodejs'
+
 export interface BackgroundArticle {
   title: string
   url: string
