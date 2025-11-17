@@ -46,17 +46,15 @@ export async function GET(request: NextRequest) {
         const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(googleQuery)}`
 
         // Fetch via Zyte API
-        const apiUrl = `https://api.zyte.com/v1/extract`
-        const auth = Buffer.from(`${apiKey}:`).toString('base64')
-        const response = await fetch(apiUrl, {
+        const response = await fetch('https://api.zyte.com/v1/extract', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Basic ${auth}`,
+            'Authorization': `Bearer ${apiKey}`,
           },
           body: JSON.stringify({
             url: googleSearchUrl,
-            httpResponseBody: true,
+            browserHtml: true,
           }),
         })
 
@@ -66,8 +64,7 @@ export async function GET(request: NextRequest) {
         }
 
         const data = await response.json()
-        const htmlBase64 = data.httpResponseBody || ''
-        const html = Buffer.from(htmlBase64, 'base64').toString('utf-8')
+        const html = data.browserHtml ?? ''
 
         const $ = cheerio.load(html)
 

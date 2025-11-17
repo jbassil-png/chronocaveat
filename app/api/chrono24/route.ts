@@ -32,17 +32,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json([] as Listing[], { status: 200 })
     }
 
-    const apiUrl = `https://api.zyte.com/v1/extract`
-    const auth = Buffer.from(`${apiKey}:`).toString('base64')
-    const response = await fetch(apiUrl, {
+    const response = await fetch('https://api.zyte.com/v1/extract', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Basic ${auth}`,
+        'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         url: searchUrl,
-        browserHtml: true,  // Use browser rendering instead of httpResponseBody
+        browserHtml: true,
       }),
     })
 
@@ -52,8 +50,7 @@ export async function GET(request: NextRequest) {
     }
 
     const data = await response.json()
-    // browserHtml returns plain text, not Base64
-    const html = data.browserHtml || ''
+    const html = data.browserHtml ?? ''
 
     const $ = cheerio.load(html)
 
