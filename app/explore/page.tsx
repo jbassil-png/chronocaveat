@@ -19,13 +19,24 @@ interface Listing {
   sellerLocation: string | null
 }
 
+interface EbayListing {
+  title: string
+  price: string
+  url: string
+  image: string | null
+  condition: string | null
+  sellerLocation: string | null
+}
+
 function ExploreContent() {
   const searchParams = useSearchParams()
   const url = searchParams.get('url')
   const [watchData, setWatchData] = useState<ExtractedData | null>(null)
   const [listings, setListings] = useState<Listing[]>([])
+  const [ebayListings, setEbayListings] = useState<EbayListing[]>([])
   const [loading, setLoading] = useState(false)
   const [listingsLoading, setListingsLoading] = useState(false)
+  const [ebayLoading, setEbayLoading] = useState(false)
 
   useEffect(() => {
     if (!url) return
@@ -87,6 +98,40 @@ function ExploreContent() {
     }
 
     fetchListings()
+  }, [watchData])
+
+  // Fetch eBay listings when we have a reference number
+  useEffect(() => {
+    if (!watchData?.reference) {
+      setEbayListings([])
+      return
+    }
+
+    const fetchEbayListings = async () => {
+      setEbayLoading(true)
+      try {
+        const response = await fetch(
+          `/api/ebay?reference=${encodeURIComponent(watchData.reference as string)}`,
+          { cache: 'no-store' }
+        )
+
+        if (!response.ok) {
+          console.error('Failed to fetch eBay listings:', response.statusText)
+          setEbayListings([])
+          return
+        }
+
+        const data = await response.json()
+        setEbayListings(data)
+      } catch (error) {
+        console.error('Error fetching eBay listings:', error)
+        setEbayListings([])
+      } finally {
+        setEbayLoading(false)
+      }
+    }
+
+    fetchEbayListings()
   }, [watchData])
 
   return (
@@ -235,13 +280,60 @@ function ExploreContent() {
             )}
           </div>
 
-          {/* eBay Listings Placeholder */}
+          {/* eBay Listings */}
           <div className="pt-6 border-t border-slate-700">
             <h3 className="text-lg font-semibold text-white mb-3">eBay Listings</h3>
-            <p className="text-slate-400 italic">Coming soon...</p>
-            <p className="text-slate-500 text-sm mt-2">
-              eBay integration will be added in future updates.
-            </p>
+
+            {ebayLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-pulse text-slate-400">Loading eBay listings...</div>
+              </div>
+            ) : !watchData?.reference ? (
+              <p className="text-slate-400 italic">
+                No reference number detected — cannot search for listings.
+              </p>
+            ) : ebayListings.length === 0 ? (
+              <p className="text-slate-400 italic">No eBay listings found.</p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {ebayListings.map((listing, index) => (
+                  <div
+                    key={index}
+                    className="bg-white p-4 shadow rounded-lg hover:shadow-md transition"
+                  >
+                    {listing.image && (
+                      <img
+                        src={listing.image}
+                        alt={listing.title}
+                        className="w-full h-48 object-cover rounded-md mb-3"
+                      />
+                    )}
+                    <h4 className="text-sm font-semibold text-gray-900 mb-2 line-clamp-2">
+                      {listing.title}
+                    </h4>
+                    <p className="text-lg font-bold text-gray-900 mb-2">{listing.price}</p>
+                    {listing.condition && (
+                      <p className="text-xs text-gray-700 mb-2">
+                        Condition: {listing.condition}
+                      </p>
+                    )}
+                    {listing.sellerLocation && (
+                      <p className="text-xs text-gray-600 mb-3">
+                        📍 {listing.sellerLocation}
+                      </p>
+                    )}
+                    <a
+                      href={listing.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block w-full bg-blue-600 hover:bg-blue-700 text-white text-center font-medium py-2 px-4 rounded transition-colors duration-200"
+                    >
+                      View on eBay
+                    </a>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
