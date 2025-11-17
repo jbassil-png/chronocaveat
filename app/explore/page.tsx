@@ -172,8 +172,10 @@ function ExploreContent() {
           </div>
 
           {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-pulse text-slate-400">Loading watch information...</div>
+            <div className="flex flex-col items-center justify-center py-8 space-y-3">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+              <div className="text-slate-400">Loading watch information...</div>
+              <div className="text-slate-500 text-sm">This may take 15-30 seconds</div>
             </div>
           ) : watchData ? (
             <div className="space-y-4">
@@ -234,8 +236,10 @@ function ExploreContent() {
             <h3 className="text-lg font-semibold text-white mb-3">Chrono24 Listings</h3>
 
             {listingsLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-pulse text-slate-400">Loading listings...</div>
+              <div className="flex flex-col items-center justify-center py-8 space-y-3">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                <div className="text-slate-400">Loading Chrono24 listings...</div>
+                <div className="text-slate-500 text-sm">This may take 15-20 seconds</div>
               </div>
             ) : !watchData?.reference ? (
               <p className="text-slate-400 italic">
@@ -285,8 +289,10 @@ function ExploreContent() {
             <h3 className="text-lg font-semibold text-white mb-3">eBay Listings</h3>
 
             {ebayLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-pulse text-slate-400">Loading eBay listings...</div>
+              <div className="flex flex-col items-center justify-center py-8 space-y-3">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                <div className="text-slate-400">Loading eBay listings...</div>
+                <div className="text-slate-500 text-sm">This may take a few seconds</div>
               </div>
             ) : !watchData?.reference ? (
               <p className="text-slate-400 italic">
