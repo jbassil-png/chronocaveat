@@ -1,180 +1,176 @@
-import { NextRequest, NextResponse } from 'next/server'
-import * as cheerio from 'cheerio'
+// Force Node runtime so console.log and Cheerio work reliably
+export const runtime = "nodejs";
 
-export const runtime = 'nodejs'
+import { NextResponse } from "next/server";
+import * as cheerio from "cheerio";
 
-export interface BackgroundArticle {
-  title: string
-  url: string
-  snippet: string | null
-  source: string
+// Publisher search endpoints
+const SOURCES = [
+  {
+    name: "Hodinkee",
+    buildUrl: (q: string) =>
+      `https://www.hodinkee.com/search?q=${encodeURIComponent(q)}`,
+  },
+  {
+    name: "Fratello",
+    buildUrl: (q: string) =>
+      `https://www.fratellowatches.com/?s=${encodeURIComponent(q)}`,
+  },
+  {
+    name: "Monochrome",
+    buildUrl: (q: string) =>
+      `https://monochrome-watches.com/?s=${encodeURIComponent(q)}`,
+  },
+  {
+    name: "SJX",
+    buildUrl: (q: string) =>
+      `https://watchesbysjx.com/?s=${encodeURIComponent(q)}`,
+  },
+];
+
+// Proper Zyte JSON structure with JavaScript rendering
+async function fetchViaZyte(url: string): Promise<string> {
+  const apiKey = process.env.ZYTE_API_KEY;
+  const auth = Buffer.from(`${apiKey}:`).toString("base64");
+
+  const res = await fetch("https://api.zyte.com/v1/extract", {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${auth}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      url,
+      browserHtml: true,
+      javascript: true,
+      // Wait for page to load before extracting
+      actions: [
+        {
+          action: "waitForTimeout",
+          timeout: 3,
+          onError: "return",
+        },
+      ],
+    }),
+  });
+
+  const data = await res.json();
+  return data.browserHtml ?? "";
 }
 
-const SOURCES = [
-  { name: 'Hodinkee', url: (q: string) => `https://www.hodinkee.com/search?q=${encodeURIComponent(q)}` },
-  { name: 'Fratello', url: (q: string) => `https://www.fratellowatches.com/?s=${encodeURIComponent(q)}` },
-  { name: 'Monochrome', url: (q: string) => `https://monochrome-watches.com/?s=${encodeURIComponent(q)}` },
-  { name: 'SJX', url: (q: string) => `https://watchesbysjx.com/?s=${encodeURIComponent(q)}` },
-]
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const brand = searchParams.get("brand") || "";
+  const model = searchParams.get("model") || "";
 
-export async function GET(request: NextRequest) {
-  try {
-    const searchParams = request.nextUrl.searchParams
-    const brand = searchParams.get('brand')
-    const model = searchParams.get('model')
-
-    // Validate required parameters
-    if (!brand || !model) {
-      return NextResponse.json(
-        { error: 'Both brand and model parameters are required' },
-        { status: 400 }
-      )
-    }
-
-    // Build cleaned query string
-    const query = `${brand} ${model}`.trim()
-    const articles: BackgroundArticle[] = []
-
-    // Check for Zyte API key
-    const apiKey = process.env.ZYTE_API_KEY
-    if (!apiKey) {
-      console.error('Zyte API key not configured')
-      return NextResponse.json([] as BackgroundArticle[], { status: 200 })
-    }
-
-    // Search each publisher
-    for (const source of SOURCES) {
-      try {
-        // Get search URL for this publisher
-        const searchUrl = source.url(query)
-
-        // Fetch via Zyte API
-        const auth = Buffer.from(`${apiKey}:`).toString('base64')
-        const response = await fetch('https://api.zyte.com/v1/extract', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Basic ${auth}`,
-          },
-          body: JSON.stringify({
-            url: searchUrl,
-            browserHtml: true,
-          }),
-        })
-
-        if (!response.ok) {
-          console.error(`Failed to fetch ${source.name} search: ${response.status}`)
-          continue
-        }
-
-        const data = await response.json()
-        const html = data.browserHtml ?? ''
-        console.log(`DEBUG ${source.name} HTML:`, html.slice(0, 500))
-        const $ = cheerio.load(html)
-
-        let resultsFound = 0
-
-        // Extract articles based on publisher
-        switch (source.name) {
-          case 'Hodinkee':
-            $('article').each((_, element) => {
-              if (resultsFound >= 2) return false
-
-              const $article = $(element)
-              const $link = $article.find('a[href]').first()
-              const url = $link.attr('href')
-              const title = $article.find('h2').first().text().trim()
-              const snippet = $article.find('p').first().text().trim()
-
-              if (title && url) {
-                articles.push({
-                  title,
-                  url: url.startsWith('http') ? url : `https://www.hodinkee.com${url}`,
-                  snippet: snippet || null,
-                  source: source.name,
-                })
-                resultsFound++
-              }
-            })
-            break
-
-          case 'Fratello':
-            $('.post-item, .post').each((_, element) => {
-              if (resultsFound >= 2) return false
-
-              const $post = $(element)
-              const $link = $post.find('a[href]').first()
-              const url = $link.attr('href')
-              const title = $post.find('h2, h3, .entry-title').first().text().trim()
-              const snippet = $post.find('.excerpt, .entry-excerpt, p').first().text().trim()
-
-              if (title && url) {
-                articles.push({
-                  title,
-                  url: url.startsWith('http') ? url : `https://www.fratellowatches.com${url}`,
-                  snippet: snippet || null,
-                  source: source.name,
-                })
-                resultsFound++
-              }
-            })
-            break
-
-          case 'Monochrome':
-            $('article.post').each((_, element) => {
-              if (resultsFound >= 2) return false
-
-              const $article = $(element)
-              const title = $article.find('h2.entry-title').first().text().trim()
-              const $link = $article.find('h2.entry-title a').first()
-              const url = $link.attr('href')
-              const snippet = $article.find('div.entry-excerpt, .entry-summary, p').first().text().trim()
-
-              if (title && url) {
-                articles.push({
-                  title,
-                  url: url.startsWith('http') ? url : `https://monochrome-watches.com${url}`,
-                  snippet: snippet || null,
-                  source: source.name,
-                })
-                resultsFound++
-              }
-            })
-            break
-
-          case 'SJX':
-            $('article.post').each((_, element) => {
-              if (resultsFound >= 2) return false
-
-              const $article = $(element)
-              const title = $article.find('h2.entry-title').first().text().trim()
-              const $link = $article.find('h2.entry-title a').first()
-              const url = $link.attr('href')
-              const snippet = $article.find('div.entry-summary, .entry-excerpt, p').first().text().trim()
-
-              if (title && url) {
-                articles.push({
-                  title,
-                  url: url.startsWith('http') ? url : `https://watchesbysjx.com${url}`,
-                  snippet: snippet || null,
-                  source: source.name,
-                })
-                resultsFound++
-              }
-            })
-            break
-        }
-      } catch (error) {
-        console.error(`Error searching ${source.name}:`, error)
-        // Continue with next publisher
-      }
-    }
-
-    // Return articles (empty array if none found)
-    return NextResponse.json(articles, { status: 200 })
-  } catch (error) {
-    console.error('Error in background reading API:', error)
-    // Return empty array on error rather than failing
-    return NextResponse.json([] as BackgroundArticle[], { status: 200 })
+  if (!brand && !model) {
+    return NextResponse.json(
+      { error: "Missing brand or model" },
+      { status: 400 }
+    );
   }
+
+  const query = `${brand} ${model}`.trim();
+  const results: any[] = [];
+
+  for (const source of SOURCES) {
+    try {
+      const searchUrl = source.buildUrl(query);
+      const html = await fetchViaZyte(searchUrl);
+      const $ = cheerio.load(html);
+      const siteResults: any[] = [];
+
+      // Site-specific selectors
+      if (source.name === "Hodinkee") {
+        $(".product-card.article-card").slice(0, 2).each((i, el) => {
+          const $card = $(el);
+          const title = $card.find("h2.article-title").text().trim();
+          const $link = $card.find("a.product-card-content").first();
+          const url = $link.attr("href") || "";
+          const snippet = $card.find("p.article-meta").text().trim();
+
+          if (title && url) {
+            siteResults.push({
+              title,
+              url: url.startsWith("http")
+                ? url
+                : `https://www.hodinkee.com${url}`,
+              snippet: snippet || null,
+              source: "Hodinkee",
+            });
+          }
+        });
+      }
+
+      if (source.name === "Fratello") {
+        $("a.post-tile-box")
+          .slice(0, 2)
+          .each((_, el) => {
+            const $link = $(el);
+            const url = $link.attr("href") || "";
+            const title = $link.find("span.h2").text().trim();
+            const snippet = $link.find(".post-list-meta").text().trim();
+
+            if (title && url) {
+              siteResults.push({
+                title,
+                url,
+                snippet: snippet || null,
+                source: "Fratello",
+              });
+            }
+          });
+      }
+
+      if (source.name === "Monochrome") {
+        $("article.post-card")
+          .slice(0, 2)
+          .each((_, el) => {
+            const $article = $(el);
+            const $link = $article.find("a").first();
+            const url = $link.attr("href") || "";
+            const title = $article.find("h3.post-card__title").text().trim();
+            const author = $article.find(".post-card__author").text().trim();
+
+            if (title && url) {
+              siteResults.push({
+                title,
+                url,
+                snippet: author || null,
+                source: "Monochrome",
+              });
+            }
+          });
+      }
+
+      if (source.name === "SJX") {
+        $("div[class^='brand-']")
+          .slice(0, 2)
+          .each((_, el) => {
+            const $div = $(el);
+            const title = $div.find("h2 a").text().trim();
+            const url = $div.find("h2 a").attr("href") || "";
+            const snippet = $div.find("span").first().text().trim();
+            const date = $div.find("footer span").first().text().trim();
+
+            if (title && url) {
+              siteResults.push({
+                title,
+                url,
+                snippet: date || snippet || null,
+                source: "SJX",
+              });
+            }
+          });
+      }
+
+      results.push(...siteResults);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      console.error(`Error scraping ${source.name}:`, errorMsg);
+      continue;
+    }
+  }
+
+  return NextResponse.json(results);
 }
