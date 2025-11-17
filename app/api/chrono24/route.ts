@@ -25,15 +25,18 @@ export async function GET(request: NextRequest) {
     // Construct Chrono24 search URL
     const searchUrl = `https://www.chrono24.com/search/index.htm?query=${encodeURIComponent(reference)}`
 
-    // Fetch the search results page
-    const response = await fetch(searchUrl, {
+    // Fetch the search results page through Zyte API
+    const apiUrl = `https://api.zyte.com/v1/extract`
+    const response = await fetch(apiUrl, {
+      method: 'POST',
       headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        Accept:
-          'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9',
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.ZYTE_API_KEY}`,
       },
+      body: JSON.stringify({
+        url: searchUrl,
+        httpResponseBody: true,
+      }),
     })
 
     if (!response.ok) {
@@ -41,7 +44,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json([] as Listing[], { status: 200 })
     }
 
-    const html = await response.text()
+    const data = await response.json()
+    const html = data.httpResponseBody || ''
     const $ = cheerio.load(html)
 
     const listings: Listing[] = []
