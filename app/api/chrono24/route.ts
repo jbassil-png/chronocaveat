@@ -26,12 +26,19 @@ export async function GET(request: NextRequest) {
     const searchUrl = `https://www.chrono24.com/search/index.htm?query=${encodeURIComponent(reference)}`
 
     // Fetch the search results page through Zyte API
+    const apiKey = process.env.ZYTE_API_KEY
+    if (!apiKey) {
+      console.error('Zyte API key not configured')
+      return NextResponse.json([] as Listing[], { status: 200 })
+    }
+
     const apiUrl = `https://api.zyte.com/v1/extract`
+    const auth = Buffer.from(`${apiKey}:`).toString('base64')
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.ZYTE_API_KEY}`,
+        'Authorization': `Basic ${auth}`,
       },
       body: JSON.stringify({
         url: searchUrl,
@@ -45,7 +52,11 @@ export async function GET(request: NextRequest) {
     }
 
     const data = await response.json()
-    const html = data.httpResponseBody || ''
+    const htmlBase64 = data.httpResponseBody || ''
+
+    // Decode Base64 HTML
+    const html = Buffer.from(htmlBase64, 'base64').toString('utf-8')
+
     const $ = cheerio.load(html)
 
     const listings: Listing[] = []
