@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
       },
       body: JSON.stringify({
         url: url,
-        httpResponseBody: true,
+        browserHtml: true,  // Use browser rendering for JavaScript-heavy pages
       }),
     })
 
@@ -60,10 +60,8 @@ export async function GET(request: NextRequest) {
     }
 
     const data = await response.json()
-    const htmlBase64 = data.httpResponseBody || ''
-
-    // Decode Base64 HTML
-    const html = Buffer.from(htmlBase64, 'base64').toString('utf-8')
+    // browserHtml returns plain text, not Base64
+    const html = data.browserHtml || ''
 
     const $ = cheerio.load(html)
 

@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
       },
       body: JSON.stringify({
         url: searchUrl,
-        httpResponseBody: true,
+        browserHtml: true,  // Use browser rendering instead of httpResponseBody
       }),
     })
 
@@ -52,12 +52,15 @@ export async function GET(request: NextRequest) {
     }
 
     const data = await response.json()
-    const htmlBase64 = data.httpResponseBody || ''
-
-    // Decode Base64 HTML
-    const html = Buffer.from(htmlBase64, 'base64').toString('utf-8')
+    // browserHtml returns plain text, not Base64
+    const html = data.browserHtml || ''
 
     const $ = cheerio.load(html)
+
+    // Debug: Log how many potential article elements we find
+    console.log('Total article elements:', $('article').length)
+    console.log('Elements with "article" in class:', $('[class*="article"]').length)
+    console.log('Title tag:', $('title').text())
 
     const listings: Listing[] = []
 
