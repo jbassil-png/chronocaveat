@@ -28,15 +28,24 @@ interface EbayListing {
   sellerLocation: string | null
 }
 
+interface BackgroundArticle {
+  title: string
+  url: string
+  snippet: string | null
+  source: string
+}
+
 function ExploreContent() {
   const searchParams = useSearchParams()
   const url = searchParams.get('url')
   const [watchData, setWatchData] = useState<ExtractedData | null>(null)
   const [listings, setListings] = useState<Listing[]>([])
   const [ebayListings, setEbayListings] = useState<EbayListing[]>([])
+  const [backgroundArticles, setBackgroundArticles] = useState<BackgroundArticle[]>([])
   const [loading, setLoading] = useState(false)
   const [listingsLoading, setListingsLoading] = useState(false)
   const [ebayLoading, setEbayLoading] = useState(false)
+  const [backgroundLoading, setBackgroundLoading] = useState(false)
 
   useEffect(() => {
     if (!url) return
@@ -132,6 +141,40 @@ function ExploreContent() {
     }
 
     fetchEbayListings()
+  }, [watchData])
+
+  // Fetch background reading articles when we have brand and model
+  useEffect(() => {
+    if (!watchData?.brand || !watchData?.model) {
+      setBackgroundArticles([])
+      return
+    }
+
+    const fetchBackgroundArticles = async () => {
+      setBackgroundLoading(true)
+      try {
+        const response = await fetch(
+          `/api/background?brand=${encodeURIComponent(watchData.brand || '')}&model=${encodeURIComponent(watchData.model || '')}`,
+          { cache: 'no-store' }
+        )
+
+        if (!response.ok) {
+          console.error('Failed to fetch background articles:', response.statusText)
+          setBackgroundArticles([])
+          return
+        }
+
+        const data = await response.json()
+        setBackgroundArticles(data)
+      } catch (error) {
+        console.error('Error fetching background articles:', error)
+        setBackgroundArticles([])
+      } finally {
+        setBackgroundLoading(false)
+      }
+    }
+
+    fetchBackgroundArticles()
   }, [watchData])
 
   return (
@@ -365,22 +408,64 @@ function ExploreContent() {
             <div className="text-2xl">📚</div>
             <h2 className="text-2xl font-semibold text-white">Background Reading</h2>
           </div>
-          <p className="text-slate-400 italic">Coming soon...</p>
-          <p className="text-slate-500 text-sm mt-2">
-            Articles, reviews, and resources about this watch model from trusted sources.
-          </p>
-          {/* List placeholder for future articles */}
-          <div className="space-y-3 mt-4">
-            <div className="border-l-4 border-slate-600 pl-4 py-2">
-              <p className="text-slate-500 text-sm">Article link placeholder</p>
+
+          {backgroundLoading ? (
+            <div className="flex flex-col items-center justify-center py-8 space-y-3">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+              <div className="text-slate-400">Loading articles...</div>
+              <div className="text-slate-500 text-sm">Searching trusted publishers</div>
             </div>
-            <div className="border-l-4 border-slate-600 pl-4 py-2">
-              <p className="text-slate-500 text-sm">Article link placeholder</p>
+          ) : !watchData?.brand || !watchData?.model ? (
+            <p className="text-slate-400 italic">
+              No brand or model detected — cannot search for articles.
+            </p>
+          ) : backgroundArticles.length === 0 ? (
+            <p className="text-slate-400 italic">No articles found.</p>
+          ) : (
+            <div className="space-y-4">
+              {backgroundArticles.map((article, index) => (
+                <div
+                  key={index}
+                  className="bg-white shadow rounded-lg p-4 border border-gray-200"
+                >
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <h3 className="text-base font-semibold text-gray-900 flex-1">
+                      {article.title}
+                    </h3>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 whitespace-nowrap">
+                      {article.source}
+                    </span>
+                  </div>
+                  {article.snippet && (
+                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                      {article.snippet}
+                    </p>
+                  )}
+                  <a
+                    href={article.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
+                  >
+                    Read Article
+                    <svg
+                      className="ml-1 w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                      />
+                    </svg>
+                  </a>
+                </div>
+              ))}
             </div>
-            <div className="border-l-4 border-slate-600 pl-4 py-2">
-              <p className="text-slate-500 text-sm">Article link placeholder</p>
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Community Feedback Card */}
