@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import * as cheerio from 'cheerio'
 
+export const runtime = 'nodejs'
+
 interface ExtractedData {
   brand: string | null
   model: string | null
@@ -78,10 +80,17 @@ export async function GET(request: NextRequest) {
         if (jsonText) {
           const data = JSON.parse(jsonText)
 
-          // Handle both single objects and arrays
-          const products = Array.isArray(data) ? data : [data]
+          // Handle @graph structure (common in schema.org)
+          let items = []
+          if (data['@graph']) {
+            items = data['@graph']
+          } else if (Array.isArray(data)) {
+            items = data
+          } else {
+            items = [data]
+          }
 
-          for (const item of products) {
+          for (const item of items) {
             if (item['@type'] === 'Product') {
               // Extract brand from JSON-LD
               if (item.brand?.name && !extracted.brand) {
