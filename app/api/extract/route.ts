@@ -71,26 +71,7 @@ export async function GET(request: NextRequest) {
       url,
     }
 
-    // 1. Try to extract from <title> tag
-    const title = $('title').text().trim()
-    if (title) {
-      // Chrono24 titles often follow pattern: "Brand Model - Reference - Price | Chrono24"
-      // or "Brand Model | Ref. Reference | Chrono24"
-      const titleParts = title.split('|')[0]?.trim() || ''
-
-      // Try to extract brand (usually first word)
-      const words = titleParts.split(/\s+/)
-      if (words.length > 0) {
-        extracted.brand = words[0]
-      }
-
-      // Store full title as model for now
-      if (titleParts) {
-        extracted.model = titleParts
-      }
-    }
-
-    // 2. Try to find product metadata in JSON-LD structured data
+    // 1. PRIORITY: Try to find product metadata in JSON-LD structured data
     $('script[type="application/ld+json"]').each((_, element) => {
       try {
         const jsonText = $(element).html()
@@ -102,21 +83,31 @@ export async function GET(request: NextRequest) {
 
           for (const item of products) {
             if (item['@type'] === 'Product') {
-              // Extract brand
-              if (item.brand?.name) {
+              // Extract brand from JSON-LD
+              if (item.brand?.name && !extracted.brand) {
                 extracted.brand = item.brand.name
               }
 
-              // Extract model/name
-              if (item.name) {
-                extracted.model = item.name
+              // Extract model/name from JSON-LD
+              if (item.name && !extracted.model) {
+                // Clean up the model name by removing price and seller info
+                let modelName = item.name
+                // Remove everything from "for $" onwards (including price and seller)
+                modelName = modelName.replace(/\s+for\s+\$.*$/i, '')
+                modelName = modelName.replace(/\s+for\s+€.*$/i, '')
+                modelName = modelName.replace(/\s+for\s+£.*$/i, '')
+                // Also handle "... for sale from" pattern
+                modelName = modelName.replace(/\.\.\.\s+for\s+.*$/i, '')
+                extracted.model = modelName.trim()
               }
 
-              // Extract reference number (sometimes in SKU or model)
-              if (item.sku) {
-                extracted.reference = item.sku
-              } else if (item.mpn) {
-                extracted.reference = item.mpn
+              // Extract reference number from mpn or sku
+              if (!extracted.reference) {
+                if (item.mpn) {
+                  extracted.reference = item.mpn
+                } else if (item.sku) {
+                  extracted.reference = item.sku
+                }
               }
             }
           }
@@ -126,6 +117,29 @@ export async function GET(request: NextRequest) {
         console.error('Error parsing JSON-LD:', e)
       }
     })
+
+    // 2. FALLBACK: Extract from <title> tag if JSON-LD didn't provide data
+    if (!extracted.brand || !extracted.model) {
+      const title = $('title').text().trim()
+      if (title) {
+        // Chrono24 titles often follow pattern: "Brand Model - Reference - Price | Chrono24"
+        // or "Brand Model | Ref. Reference | Chrono24"
+        const titleParts = title.split('|')[0]?.trim() || ''
+
+        // Try to extract brand (usually first word) if not already set
+        if (!extracted.brand && titleParts) {
+          const words = titleParts.split(/\s+/)
+          if (words.length > 0) {
+            extracted.brand = words[0]
+          }
+        }
+
+        // Store full title as model if not already set
+        if (!extracted.model && titleParts) {
+          extracted.model = titleParts
+        }
+      }
+    }
 
     // 3. Look for product specifications table/sections
     // Chrono24 often has a specifications section with reference numbers
