@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import * as cheerio from 'cheerio'
 
+export const maxDuration = 60
+
 export interface Listing {
   title: string
   price: string

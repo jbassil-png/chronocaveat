@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import * as cheerio from 'cheerio'
 
 export const runtime = 'nodejs'
+export const maxDuration = 60
 
 export interface CommunityPost {
   title: string
