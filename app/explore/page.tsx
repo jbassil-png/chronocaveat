@@ -35,6 +35,16 @@ interface BackgroundArticle {
   source: string
 }
 
+interface CommunityPost {
+  title: string
+  url: string
+  author: string | null
+  date: string | null
+  snippet: string | null
+  source: 'Reddit' | 'WatchUSeek'
+  replies?: number
+}
+
 function ExploreContent() {
   const searchParams = useSearchParams()
   const url = searchParams.get('url')
@@ -42,10 +52,12 @@ function ExploreContent() {
   const [listings, setListings] = useState<Listing[]>([])
   const [ebayListings, setEbayListings] = useState<EbayListing[]>([])
   const [backgroundArticles, setBackgroundArticles] = useState<BackgroundArticle[]>([])
+  const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>([])
   const [loading, setLoading] = useState(false)
   const [listingsLoading, setListingsLoading] = useState(false)
   const [ebayLoading, setEbayLoading] = useState(false)
   const [backgroundLoading, setBackgroundLoading] = useState(false)
+  const [communityLoading, setCommunityLoading] = useState(false)
 
   useEffect(() => {
     if (!url) return
@@ -175,6 +187,40 @@ function ExploreContent() {
     }
 
     fetchBackgroundArticles()
+  }, [watchData])
+
+  // Fetch community posts when we have brand and model
+  useEffect(() => {
+    if (!watchData?.brand || !watchData?.model) {
+      setCommunityPosts([])
+      return
+    }
+
+    const fetchCommunityPosts = async () => {
+      setCommunityLoading(true)
+      try {
+        const response = await fetch(
+          `/api/community?brand=${encodeURIComponent(watchData.brand || '')}&model=${encodeURIComponent(watchData.model || '')}`,
+          { cache: 'no-store' }
+        )
+
+        if (!response.ok) {
+          console.error('Failed to fetch community posts:', response.statusText)
+          setCommunityPosts([])
+          return
+        }
+
+        const data = await response.json()
+        setCommunityPosts(data)
+      } catch (error) {
+        console.error('Error fetching community posts:', error)
+        setCommunityPosts([])
+      } finally {
+        setCommunityLoading(false)
+      }
+    }
+
+    fetchCommunityPosts()
   }, [watchData])
 
   return (
@@ -474,19 +520,87 @@ function ExploreContent() {
             <div className="text-2xl">💬</div>
             <h2 className="text-2xl font-semibold text-white">Community Feedback</h2>
           </div>
-          <p className="text-slate-400 italic">Coming soon...</p>
-          <p className="text-slate-500 text-sm mt-2">
-            User reviews, ratings, and community discussions about this watch model.
-          </p>
-          {/* Feedback placeholder */}
-          <div className="space-y-3 mt-4">
-            <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
-              <p className="text-slate-500 text-sm">Community feedback placeholder</p>
+
+          {communityLoading ? (
+            <div className="flex flex-col items-center justify-center py-8 space-y-3">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+              <div className="text-slate-400">Loading community posts...</div>
+              <div className="text-slate-500 text-sm">Searching Reddit and WatchUSeek</div>
             </div>
-            <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
-              <p className="text-slate-500 text-sm">Community feedback placeholder</p>
+          ) : !watchData?.brand || !watchData?.model ? (
+            <p className="text-slate-400 italic">
+              No brand or model detected — cannot search for community posts.
+            </p>
+          ) : communityPosts.length === 0 ? (
+            <p className="text-slate-400 italic">No community posts found.</p>
+          ) : (
+            <div className="space-y-4">
+              {communityPosts.map((post, index) => (
+                <div
+                  key={index}
+                  className="bg-white shadow rounded-lg p-4 border border-gray-200"
+                >
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <h3 className="text-base font-semibold text-gray-900 flex-1">
+                      {post.title}
+                    </h3>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 whitespace-nowrap">
+                      {post.source}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-4 text-xs text-gray-500 mb-2">
+                    {post.author && (
+                      <span className="flex items-center gap-1">
+                        <span>👤</span>
+                        <span>{post.author}</span>
+                      </span>
+                    )}
+                    {post.date && (
+                      <span className="flex items-center gap-1">
+                        <span>📅</span>
+                        <span>{post.date}</span>
+                      </span>
+                    )}
+                    {post.replies !== undefined && (
+                      <span className="flex items-center gap-1">
+                        <span>💬</span>
+                        <span>{post.replies} {post.replies === 1 ? 'reply' : 'replies'}</span>
+                      </span>
+                    )}
+                  </div>
+
+                  {post.snippet && (
+                    <p className="text-sm text-gray-600 mb-3 line-clamp-3">
+                      {post.snippet}
+                    </p>
+                  )}
+
+                  <a
+                    href={post.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
+                  >
+                    View Discussion
+                    <svg
+                      className="ml-1 w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                      />
+                    </svg>
+                  </a>
+                </div>
+              ))}
             </div>
-          </div>
+          )}
         </div>
       </div>
 

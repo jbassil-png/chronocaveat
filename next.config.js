@@ -1,11 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',
+  // Temporarily disable static export for development
+  // output: 'export',
   images: {
     unoptimized: true,
   },
-  basePath: process.env.NODE_ENV === 'production' ? '/chronocaveat' : '',
-  assetPrefix: process.env.NODE_ENV === 'production' ? '/chronocaveat/' : '',
+  // basePath: process.env.NODE_ENV === 'production' ? '/chronocaveat' : '',
+  // assetPrefix: process.env.NODE_ENV === 'production' ? '/chronocaveat/' : '',
 }
 
 module.exports = nextConfig
