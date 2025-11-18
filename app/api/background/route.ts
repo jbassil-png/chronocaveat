@@ -6,12 +6,24 @@ export const maxDuration = 60;
 import { NextResponse } from "next/server";
 import * as cheerio from "cheerio";
 
-// Trusted watch publishers to search
-const PUBLISHERS = [
-  { name: "Hodinkee", domain: "hodinkee.com" },
-  { name: "Fratello", domain: "fratellowatches.com" },
-  { name: "Monochrome", domain: "monochrome-watches.com" },
-  { name: "SJX", domain: "watchesbysjx.com" },
+// Trusted watch publishers with direct search URLs
+const SOURCES = [
+  {
+    name: "Hodinkee",
+    buildUrl: (q: string) => `https://www.hodinkee.com/search?q=${encodeURIComponent(q)}`,
+  },
+  {
+    name: "Fratello",
+    buildUrl: (q: string) => `https://www.fratellowatches.com/?s=${encodeURIComponent(q)}`,
+  },
+  {
+    name: "Monochrome",
+    buildUrl: (q: string) => `https://monochrome-watches.com/?s=${encodeURIComponent(q)}`,
+  },
+  {
+    name: "SJX",
+    buildUrl: (q: string) => `https://watchesbysjx.com/?s=${encodeURIComponent(q)}`,
+  },
 ];
 
 // Proper Zyte JSON structure with JavaScript rendering
@@ -57,62 +69,126 @@ export async function GET(req: Request) {
     );
   }
 
-  // Build search query - use reference if available for specificity
-  const searchQuery = reference
-    ? `${brand} ${reference}`.trim()
-    : `${brand} ${model}`.trim();
+  // Build search query - use clean model name from JSON-LD
+  const searchQuery = `${brand} ${model}`.trim();
+
+  console.log(`[Background API] Searching for: "${searchQuery}"`);
 
   const results: any[] = [];
 
-  // Search each publisher using Google site search
-  for (const publisher of PUBLISHERS) {
+  // Search each publisher directly using their native search
+  for (const source of SOURCES) {
     try {
-      // Use Google site search for better relevance
-      const googleQuery = `site:${publisher.domain} ${searchQuery} review`;
-      const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(googleQuery)}`;
+      const searchUrl = source.buildUrl(searchQuery);
+      console.log(`[Background API] Fetching ${source.name}: ${searchUrl}`);
 
-      const html = await fetchViaZyte(googleSearchUrl);
+      const html = await fetchViaZyte(searchUrl);
       const $ = cheerio.load(html);
 
-      // Parse Google search results
-      // Google uses div.g for organic results
       let resultsFound = 0;
-      $("div.g").each((_, element) => {
-        if (resultsFound >= 2) return false; // Max 2 results per publisher
 
-        const $result = $(element);
+      // Publisher-specific selectors for search results
+      if (source.name === "Hodinkee") {
+        // Hodinkee uses article cards in search results
+        $("article.search-result, article[class*='search'], .search-results article").each((_, element) => {
+          if (resultsFound >= 2) return false;
 
-        // Extract title from h3
-        const title = $result.find("h3").text().trim();
+          const $article = $(element);
+          const $link = $article.find("a[href*='/articles/']").first();
+          const url = $link.attr("href") || "";
+          const title = $link.text().trim() || $article.find("h2, h3, .title").text().trim();
+          const snippet = $article.find("p, .excerpt, .description").first().text().trim();
 
-        // Extract URL from the main link
-        const $link = $result.find("a").first();
-        const url = $link.attr("href") || "";
+          if (title && url) {
+            results.push({
+              title,
+              url: url.startsWith("http") ? url : `https://www.hodinkee.com${url}`,
+              snippet: snippet || null,
+              source: source.name,
+            });
+            resultsFound++;
+          }
+        });
+      }
 
-        // Extract snippet from the description
-        const snippet = $result
-          .find("div[data-sncf], div.VwiC3b, span.aCOpRe")
-          .first()
-          .text()
-          .trim();
+      if (source.name === "Fratello") {
+        // Fratello uses article elements
+        $("article, .post, .search-result").each((_, element) => {
+          if (resultsFound >= 2) return false;
 
-        // Only add if we have both title and valid URL
-        if (title && url && url.includes(publisher.domain)) {
-          results.push({
-            title,
-            url,
-            snippet: snippet || null,
-            source: publisher.name,
-          });
-          resultsFound++;
-        }
-      });
+          const $article = $(element);
+          const $link = $article.find("a[rel='bookmark'], h2 a, h3 a").first();
+          const url = $link.attr("href") || "";
+          const title = $link.text().trim() || $article.find("h2, h3").text().trim();
+          const snippet = $article.find(".entry-summary, .excerpt, p").first().text().trim();
+
+          if (title && url && url.includes("fratellowatches.com")) {
+            results.push({
+              title,
+              url,
+              snippet: snippet || null,
+              source: source.name,
+            });
+            resultsFound++;
+          }
+        });
+      }
+
+      if (source.name === "Monochrome") {
+        // Monochrome uses article elements
+        $("article, .post").each((_, element) => {
+          if (resultsFound >= 2) return false;
+
+          const $article = $(element);
+          const $link = $article.find("a[rel='bookmark'], h2 a, h3 a, .entry-title a").first();
+          const url = $link.attr("href") || "";
+          const title = $link.text().trim() || $article.find("h2, h3, .entry-title").text().trim();
+          const snippet = $article.find(".entry-content, .excerpt, p").first().text().trim();
+
+          if (title && url && url.includes("monochrome-watches.com")) {
+            results.push({
+              title,
+              url,
+              snippet: snippet || null,
+              source: source.name,
+            });
+            resultsFound++;
+          }
+        });
+      }
+
+      if (source.name === "SJX") {
+        // SJX uses article elements
+        $("article, .post-item, .search-result").each((_, element) => {
+          if (resultsFound >= 2) return false;
+
+          const $article = $(element);
+          const $link = $article.find("a[rel='bookmark'], h2 a, h3 a, .post-title a").first();
+          const url = $link.attr("href") || "";
+          const title = $link.text().trim() || $article.find("h2, h3, .post-title").text().trim();
+          const snippet = $article.find(".post-excerpt, .excerpt, p").first().text().trim();
+
+          if (title && url && url.includes("watchesbysjx.com")) {
+            results.push({
+              title,
+              url,
+              snippet: snippet || null,
+              source: source.name,
+            });
+            resultsFound++;
+          }
+        });
+      }
+
+      console.log(`[Background API] Found ${resultsFound} results from ${source.name}`);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
-      console.error(`Error searching ${publisher.name}:`, errorMsg);
+      console.error(`[Background API] Error searching ${source.name}:`, errorMsg);
       continue;
     }
   }
+
+  console.log(`[Background API] Total results: ${results.length}`);
 
   return NextResponse.json(results);
 }
