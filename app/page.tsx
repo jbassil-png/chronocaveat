@@ -170,7 +170,7 @@ export default function Home() {
       setBackgroundLoading(true)
       try {
         const response = await fetch(
-          `/api/background?brand=${encodeURIComponent(watchData.brand || '')}&model=${encodeURIComponent(watchData.model || '')}`,
+          `/api/background?brand=${encodeURIComponent(watchData.brand || '')}&model=${encodeURIComponent(watchData.model || '')}&reference=${encodeURIComponent(watchData.reference || '')}`,
           { cache: 'no-store' }
         )
 

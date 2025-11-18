@@ -6,28 +6,12 @@ export const maxDuration = 60;
 import { NextResponse } from "next/server";
 import * as cheerio from "cheerio";
 
-// Publisher search endpoints
-const SOURCES = [
-  {
-    name: "Hodinkee",
-    buildUrl: (q: string) =>
-      `https://www.hodinkee.com/search?q=${encodeURIComponent(q)}`,
-  },
-  {
-    name: "Fratello",
-    buildUrl: (q: string) =>
-      `https://www.fratellowatches.com/?s=${encodeURIComponent(q)}`,
-  },
-  {
-    name: "Monochrome",
-    buildUrl: (q: string) =>
-      `https://monochrome-watches.com/?s=${encodeURIComponent(q)}`,
-  },
-  {
-    name: "SJX",
-    buildUrl: (q: string) =>
-      `https://watchesbysjx.com/?s=${encodeURIComponent(q)}`,
-  },
+// Trusted watch publishers to search
+const PUBLISHERS = [
+  { name: "Hodinkee", domain: "hodinkee.com" },
+  { name: "Fratello", domain: "fratellowatches.com" },
+  { name: "Monochrome", domain: "monochrome-watches.com" },
+  { name: "SJX", domain: "watchesbysjx.com" },
 ];
 
 // Proper Zyte JSON structure with JavaScript rendering
@@ -64,6 +48,7 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const brand = searchParams.get("brand") || "";
   const model = searchParams.get("model") || "";
+  const reference = searchParams.get("reference") || "";
 
   if (!brand && !model) {
     return NextResponse.json(
@@ -72,104 +57,59 @@ export async function GET(req: Request) {
     );
   }
 
-  const query = `${brand} ${model}`.trim();
+  // Build search query - use reference if available for specificity
+  const searchQuery = reference
+    ? `${brand} ${reference}`.trim()
+    : `${brand} ${model}`.trim();
+
   const results: any[] = [];
 
-  for (const source of SOURCES) {
+  // Search each publisher using Google site search
+  for (const publisher of PUBLISHERS) {
     try {
-      const searchUrl = source.buildUrl(query);
-      const html = await fetchViaZyte(searchUrl);
+      // Use Google site search for better relevance
+      const googleQuery = `site:${publisher.domain} ${searchQuery} review`;
+      const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(googleQuery)}`;
+
+      const html = await fetchViaZyte(googleSearchUrl);
       const $ = cheerio.load(html);
-      const siteResults: any[] = [];
 
-      // Site-specific selectors
-      if (source.name === "Hodinkee") {
-        $(".product-card.article-card").slice(0, 2).each((i, el) => {
-          const $card = $(el);
-          const title = $card.find("h2.article-title").text().trim();
-          const $link = $card.find("a.product-card-content").first();
-          const url = $link.attr("href") || "";
-          const snippet = $card.find("p.article-meta").text().trim();
+      // Parse Google search results
+      // Google uses div.g for organic results
+      let resultsFound = 0;
+      $("div.g").each((_, element) => {
+        if (resultsFound >= 2) return false; // Max 2 results per publisher
 
-          if (title && url) {
-            siteResults.push({
-              title,
-              url: url.startsWith("http")
-                ? url
-                : `https://www.hodinkee.com${url}`,
-              snippet: snippet || null,
-              source: "Hodinkee",
-            });
-          }
-        });
-      }
+        const $result = $(element);
 
-      if (source.name === "Fratello") {
-        $("a.post-tile-box")
-          .slice(0, 2)
-          .each((_, el) => {
-            const $link = $(el);
-            const url = $link.attr("href") || "";
-            const title = $link.find("span.h2").text().trim();
-            const snippet = $link.find(".post-list-meta").text().trim();
+        // Extract title from h3
+        const title = $result.find("h3").text().trim();
 
-            if (title && url) {
-              siteResults.push({
-                title,
-                url,
-                snippet: snippet || null,
-                source: "Fratello",
-              });
-            }
+        // Extract URL from the main link
+        const $link = $result.find("a").first();
+        const url = $link.attr("href") || "";
+
+        // Extract snippet from the description
+        const snippet = $result
+          .find("div[data-sncf], div.VwiC3b, span.aCOpRe")
+          .first()
+          .text()
+          .trim();
+
+        // Only add if we have both title and valid URL
+        if (title && url && url.includes(publisher.domain)) {
+          results.push({
+            title,
+            url,
+            snippet: snippet || null,
+            source: publisher.name,
           });
-      }
-
-      if (source.name === "Monochrome") {
-        $("article.post-card")
-          .slice(0, 2)
-          .each((_, el) => {
-            const $article = $(el);
-            const $link = $article.find("a").first();
-            const url = $link.attr("href") || "";
-            const title = $article.find("h3.post-card__title").text().trim();
-            const author = $article.find(".post-card__author").text().trim();
-
-            if (title && url) {
-              siteResults.push({
-                title,
-                url,
-                snippet: author || null,
-                source: "Monochrome",
-              });
-            }
-          });
-      }
-
-      if (source.name === "SJX") {
-        $("div[class^='brand-']")
-          .slice(0, 2)
-          .each((_, el) => {
-            const $div = $(el);
-            const title = $div.find("h2 a").text().trim();
-            const url = $div.find("h2 a").attr("href") || "";
-            const snippet = $div.find("span").first().text().trim();
-            const date = $div.find("footer span").first().text().trim();
-
-            if (title && url) {
-              siteResults.push({
-                title,
-                url,
-                snippet: date || snippet || null,
-                source: "SJX",
-              });
-            }
-          });
-      }
-
-      results.push(...siteResults);
+          resultsFound++;
+        }
+      });
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
-      console.error(`Error scraping ${source.name}:`, errorMsg);
+      console.error(`Error searching ${publisher.name}:`, errorMsg);
       continue;
     }
   }
