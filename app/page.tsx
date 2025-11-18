@@ -230,10 +230,10 @@ export default function Home() {
   return (
     <div className="min-h-screen">
       {/* Compact Sticky Search Bar */}
-      <div className={`sticky top-0 z-50 bg-slate-900/95 backdrop-blur-sm border-b border-slate-700 transition-all duration-300 ${watchData ? 'shadow-lg' : ''}`}>
+      <div className={`sticky top-0 z-50 bg-[#0D0D0D]/95 backdrop-blur-sm border-b border-[#A6A6A6]/20 transition-all duration-300 ${watchData ? 'shadow-lg' : ''}`}>
         <div className="container mx-auto px-4 py-4 max-w-7xl">
           <div className="flex items-center gap-4">
-            <h1 className="text-xl font-bold text-white whitespace-nowrap">
+            <h1 className="text-xl font-bold text-[#F2F2F2] whitespace-nowrap">
               ChronoCaveat
             </h1>
             <form onSubmit={handleSubmit} className="flex-1 flex gap-2">
@@ -242,13 +242,13 @@ export default function Home() {
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 placeholder="Paste Chrono24 watch URL to analyze..."
-                className="flex-1 px-4 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                className="flex-1 px-4 py-2 bg-[#0D0D0D] border border-[#A6A6A6]/30 rounded-lg text-[#F2F2F2] placeholder-[#A6A6A6] focus:outline-none focus:ring-2 focus:ring-[#A68A56] focus:border-transparent text-sm"
                 required
               />
               <button
                 type="submit"
                 disabled={loading}
-                className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white font-medium py-2 px-6 rounded-lg transition-colors duration-200 text-sm whitespace-nowrap"
+                className="bg-[#A68A56] hover:bg-[#A67A46] disabled:bg-[#A6A6A6]/50 disabled:cursor-not-allowed text-[#F2F2F2] font-medium py-2 px-6 rounded-lg transition-colors duration-200 text-sm whitespace-nowrap"
               >
                 {loading ? 'Analyzing...' : 'Analyze'}
               </button>
@@ -263,10 +263,10 @@ export default function Home() {
           /* Hero Section - Only show when no results */
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-12 mt-8">
-              <h2 className="text-4xl font-bold text-white mb-4">
+              <h2 className="text-4xl font-bold text-[#F2F2F2] mb-4">
                 Discover Watch Market Insights
               </h2>
-              <p className="text-lg text-slate-300 mb-8">
+              <p className="text-lg text-[#A6A6A6] mb-8">
                 Analyze Chrono24 watch listings, compare prices, and explore market trends with powerful data visualization
               </p>
             </div>
@@ -275,22 +275,22 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-16">
               <div className="text-center">
                 <div className="text-4xl mb-3">📊</div>
-                <h3 className="text-lg font-semibold text-white mb-2">Price Analysis</h3>
-                <p className="text-slate-400 text-sm">
+                <h3 className="text-lg font-semibold text-[#F2F2F2] mb-2">Price Analysis</h3>
+                <p className="text-[#A6A6A6] text-sm">
                   Compare current prices with historical data and market averages
                 </p>
               </div>
               <div className="text-center">
                 <div className="text-4xl mb-3">⌚</div>
-                <h3 className="text-lg font-semibold text-white mb-2">Watch Details</h3>
-                <p className="text-slate-400 text-sm">
+                <h3 className="text-lg font-semibold text-[#F2F2F2] mb-2">Watch Details</h3>
+                <p className="text-[#A6A6A6] text-sm">
                   Comprehensive specifications and condition information
                 </p>
               </div>
               <div className="text-center">
                 <div className="text-4xl mb-3">📈</div>
-                <h3 className="text-lg font-semibold text-white mb-2">Market Trends</h3>
-                <p className="text-slate-400 text-sm">
+                <h3 className="text-lg font-semibold text-[#F2F2F2] mb-2">Market Trends</h3>
+                <p className="text-[#A6A6A6] text-sm">
                   Track pricing trends and market movements over time
                 </p>
               </div>
@@ -300,59 +300,59 @@ export default function Home() {
           /* Results Section */
           <div className="space-y-6">
             {/* Model Information Card */}
-            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-6 shadow-lg">
+            <div className="bg-[#0D0D0D]/50 backdrop-blur-sm border border-[#A6A6A6]/20 rounded-lg p-6 shadow-lg">
               <div className="flex items-center gap-3 mb-4">
                 <div className="text-2xl">⌚</div>
-                <h2 className="text-2xl font-semibold text-white">Model Information</h2>
+                <h2 className="text-2xl font-semibold text-[#F2F2F2]">Model Information</h2>
               </div>
 
               {loading ? (
                 <div className="flex flex-col items-center justify-center py-8 space-y-3">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                  <div className="text-slate-400">Loading watch information...</div>
-                  <div className="text-slate-500 text-sm">This may take 15-30 seconds</div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#A68A56]"></div>
+                  <div className="text-[#A6A6A6]">Loading watch information...</div>
+                  <div className="text-[#A6A6A6]/70 text-sm">This may take 15-30 seconds</div>
                 </div>
               ) : watchData ? (
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">
+                      <label className="block text-xs font-medium text-[#A6A6A6] uppercase tracking-wider mb-1">
                         Brand
                       </label>
-                      <p className="text-lg text-slate-100">
+                      <p className="text-lg text-[#F2F2F2]">
                         {watchData.brand || '—'}
                       </p>
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">
+                      <label className="block text-xs font-medium text-[#A6A6A6] uppercase tracking-wider mb-1">
                         Reference Number
                       </label>
-                      <p className="text-lg text-slate-100">
+                      <p className="text-lg text-[#F2F2F2]">
                         {watchData.reference || '—'}
                       </p>
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-medium text-[#A6A6A6] uppercase tracking-wider mb-1">
                       Model
                     </label>
-                    <p className="text-lg text-slate-100">
+                    <p className="text-lg text-[#F2F2F2]">
                       {watchData.model || '—'}
                     </p>
                   </div>
 
-                  <p className="text-slate-500 text-sm mt-4 pt-4 border-t border-slate-700">
+                  <p className="text-[#A6A6A6]/70 text-sm mt-4 pt-4 border-t border-[#A6A6A6]/20">
                     Additional specifications, year, condition, and authenticity information will be added in future updates.
                   </p>
                 </div>
               ) : (
                 <>
-                  <p className="text-slate-400 italic">
+                  <p className="text-[#A6A6A6] italic">
                     {url ? 'No data available' : 'Enter a Chrono24 URL to see watch details'}
                   </p>
-                  <p className="text-slate-500 text-sm mt-2">
+                  <p className="text-[#A6A6A6]/70 text-sm mt-2">
                     Detailed specifications, model number, reference, year, condition, and authenticity information.
                   </p>
                 </>
@@ -360,28 +360,28 @@ export default function Home() {
             </div>
 
             {/* Other Listings Card */}
-            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-6 shadow-lg">
+            <div className="bg-[#0D0D0D]/50 backdrop-blur-sm border border-[#A6A6A6]/20 rounded-lg p-6 shadow-lg">
               <div className="flex items-center gap-3 mb-4">
                 <div className="text-2xl">🔍</div>
-                <h2 className="text-2xl font-semibold text-white">Other Listings (Chrono24 + eBay)</h2>
+                <h2 className="text-2xl font-semibold text-[#F2F2F2]">Other Listings (Chrono24 + eBay)</h2>
               </div>
 
               {/* Chrono24 Listings */}
               <div className="mb-6">
-                <h3 className="text-lg font-semibold text-white mb-3">Chrono24 Listings</h3>
+                <h3 className="text-lg font-semibold text-[#F2F2F2] mb-3">Chrono24 Listings</h3>
 
                 {listingsLoading ? (
                   <div className="flex flex-col items-center justify-center py-8 space-y-3">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                    <div className="text-slate-400">Loading Chrono24 listings...</div>
-                    <div className="text-slate-500 text-sm">This may take 15-20 seconds</div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#A68A56]"></div>
+                    <div className="text-[#A6A6A6]">Loading Chrono24 listings...</div>
+                    <div className="text-[#A6A6A6]/70 text-sm">This may take 15-20 seconds</div>
                   </div>
                 ) : !watchData?.reference ? (
-                  <p className="text-slate-400 italic">
+                  <p className="text-[#A6A6A6] italic">
                     No reference number detected — cannot search for listings.
                   </p>
                 ) : listings.length === 0 ? (
-                  <p className="text-slate-400 italic">No listings found.</p>
+                  <p className="text-[#A6A6A6] italic">No listings found.</p>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {listings.map((listing, index) => (
@@ -409,7 +409,7 @@ export default function Home() {
                           href={listing.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="block w-full bg-blue-600 hover:bg-blue-700 text-white text-center font-medium py-2 px-4 rounded transition-colors duration-200"
+                          className="block w-full bg-[#A68A56] hover:bg-[#A67A46] text-[#F2F2F2] text-center font-medium py-2 px-4 rounded transition-colors duration-200"
                         >
                           View on Chrono24
                         </a>
@@ -420,21 +420,21 @@ export default function Home() {
               </div>
 
               {/* eBay Listings */}
-              <div className="pt-6 border-t border-slate-700">
-                <h3 className="text-lg font-semibold text-white mb-3">eBay Listings</h3>
+              <div className="pt-6 border-t border-[#A6A6A6]/20">
+                <h3 className="text-lg font-semibold text-[#F2F2F2] mb-3">eBay Listings</h3>
 
                 {ebayLoading ? (
                   <div className="flex flex-col items-center justify-center py-8 space-y-3">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                    <div className="text-slate-400">Loading eBay listings...</div>
-                    <div className="text-slate-500 text-sm">This may take a few seconds</div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#A68A56]"></div>
+                    <div className="text-[#A6A6A6]">Loading eBay listings...</div>
+                    <div className="text-[#A6A6A6]/70 text-sm">This may take a few seconds</div>
                   </div>
                 ) : !watchData?.reference ? (
-                  <p className="text-slate-400 italic">
+                  <p className="text-[#A6A6A6] italic">
                     No reference number detected — cannot search for listings.
                   </p>
                 ) : ebayListings.length === 0 ? (
-                  <p className="text-slate-400 italic">No eBay listings found.</p>
+                  <p className="text-[#A6A6A6] italic">No eBay listings found.</p>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {ebayListings.map((listing, index) => (
@@ -467,7 +467,7 @@ export default function Home() {
                           href={listing.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="block w-full bg-blue-600 hover:bg-blue-700 text-white text-center font-medium py-2 px-4 rounded transition-colors duration-200"
+                          className="block w-full bg-[#A68A56] hover:bg-[#A67A46] text-[#F2F2F2] text-center font-medium py-2 px-4 rounded transition-colors duration-200"
                         >
                           View on eBay
                         </a>
@@ -479,40 +479,40 @@ export default function Home() {
             </div>
 
             {/* Price Trends Card */}
-            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-6 shadow-lg">
+            <div className="bg-[#0D0D0D]/50 backdrop-blur-sm border border-[#A6A6A6]/20 rounded-lg p-6 shadow-lg">
               <div className="flex items-center gap-3 mb-4">
                 <div className="text-2xl">📈</div>
-                <h2 className="text-2xl font-semibold text-white">Price Trends</h2>
+                <h2 className="text-2xl font-semibold text-[#F2F2F2]">Price Trends</h2>
               </div>
-              <p className="text-slate-400 italic">Coming soon...</p>
-              <p className="text-slate-500 text-sm mt-2">
+              <p className="text-[#A6A6A6] italic">Coming soon...</p>
+              <p className="text-[#A6A6A6]/70 text-sm mt-2">
                 Historical pricing data, market trends, and price predictions based on market analysis.
               </p>
               {/* Chart placeholder */}
-              <div className="border-2 border-dashed border-slate-600 rounded-lg p-16 text-center mt-4">
-                <p className="text-slate-500">Chart visualization area</p>
+              <div className="border-2 border-dashed border-[#A6A6A6]/30 rounded-lg p-16 text-center mt-4">
+                <p className="text-[#A6A6A6]/70">Chart visualization area</p>
               </div>
             </div>
 
             {/* Background Reading Card */}
-            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-6 shadow-lg">
+            <div className="bg-[#0D0D0D]/50 backdrop-blur-sm border border-[#A6A6A6]/20 rounded-lg p-6 shadow-lg">
               <div className="flex items-center gap-3 mb-4">
                 <div className="text-2xl">📚</div>
-                <h2 className="text-2xl font-semibold text-white">Background Reading</h2>
+                <h2 className="text-2xl font-semibold text-[#F2F2F2]">Background Reading</h2>
               </div>
 
               {backgroundLoading ? (
                 <div className="flex flex-col items-center justify-center py-8 space-y-3">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                  <div className="text-slate-400">Loading articles...</div>
-                  <div className="text-slate-500 text-sm">Searching trusted publishers</div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#A68A56]"></div>
+                  <div className="text-[#A6A6A6]">Loading articles...</div>
+                  <div className="text-[#A6A6A6]/70 text-sm">Searching trusted publishers</div>
                 </div>
               ) : !watchData?.brand || !watchData?.model ? (
-                <p className="text-slate-400 italic">
+                <p className="text-[#A6A6A6] italic">
                   No brand or model detected — cannot search for articles.
                 </p>
               ) : backgroundArticles.length === 0 ? (
-                <p className="text-slate-400 italic">No articles found.</p>
+                <p className="text-[#A6A6A6] italic">No articles found.</p>
               ) : (
                 <div className="space-y-4">
                   {backgroundArticles.map((article, index) => (
@@ -537,7 +537,7 @@ export default function Home() {
                         href={article.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
+                        className="inline-flex items-center text-sm font-medium text-[#A68A56] hover:text-[#A67A46] transition-colors"
                       >
                         Read Article
                         <svg
@@ -561,24 +561,24 @@ export default function Home() {
             </div>
 
             {/* Community Feedback Card */}
-            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-6 shadow-lg">
+            <div className="bg-[#0D0D0D]/50 backdrop-blur-sm border border-[#A6A6A6]/20 rounded-lg p-6 shadow-lg">
               <div className="flex items-center gap-3 mb-4">
                 <div className="text-2xl">💬</div>
-                <h2 className="text-2xl font-semibold text-white">Community Feedback</h2>
+                <h2 className="text-2xl font-semibold text-[#F2F2F2]">Community Feedback</h2>
               </div>
 
               {communityLoading ? (
                 <div className="flex flex-col items-center justify-center py-8 space-y-3">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                  <div className="text-slate-400">Loading community posts...</div>
-                  <div className="text-slate-500 text-sm">Searching Reddit and WatchUSeek</div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#A68A56]"></div>
+                  <div className="text-[#A6A6A6]">Loading community posts...</div>
+                  <div className="text-[#A6A6A6]/70 text-sm">Searching Reddit and WatchUSeek</div>
                 </div>
               ) : !watchData?.brand || !watchData?.model ? (
-                <p className="text-slate-400 italic">
+                <p className="text-[#A6A6A6] italic">
                   No brand or model detected — cannot search for community posts.
                 </p>
               ) : communityPosts.length === 0 ? (
-                <p className="text-slate-400 italic">No community posts found.</p>
+                <p className="text-[#A6A6A6] italic">No community posts found.</p>
               ) : (
                 <div className="space-y-4">
                   {communityPosts.map((post, index) => (
@@ -626,7 +626,7 @@ export default function Home() {
                         href={post.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
+                        className="inline-flex items-center text-sm font-medium text-[#A68A56] hover:text-[#A67A46] transition-colors"
                       >
                         View Discussion
                         <svg
