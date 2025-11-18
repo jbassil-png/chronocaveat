@@ -1,5 +1,6 @@
 // Force Node runtime so console.log and Cheerio work reliably
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 import { NextResponse } from "next/server";
